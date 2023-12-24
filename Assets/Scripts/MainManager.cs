@@ -12,11 +12,15 @@ public class MainManager : MonoBehaviour
 
     public Text ScoreText;
     public GameObject GameOverText;
+    public Text HighScoreText;
     
     private bool m_Started = false;
     private int m_Points;
     
     private bool m_GameOver = false;
+
+    private string playerName;
+    private HighScore current_highScore;
 
     
     // Start is called before the first frame update
@@ -36,6 +40,11 @@ public class MainManager : MonoBehaviour
                 brick.onDestroyed.AddListener(AddPoint);
             }
         }
+
+        playerName = GameManager.instance.PlayerName;
+
+        SetHighScoreText();
+        AddPoint(0);
     }
 
     private void Update()
@@ -65,12 +74,50 @@ public class MainManager : MonoBehaviour
     void AddPoint(int point)
     {
         m_Points += point;
-        ScoreText.text = $"Score : {m_Points}";
+        ScoreText.text = $"{playerName} Score : {m_Points}";
     }
 
     public void GameOver()
     {
         m_GameOver = true;
+        if (m_Points > LoadHighScore().score)
+        {
+            SaveHighScore();
+            SetHighScoreText();
+        }
         GameOverText.SetActive(true);
+    }
+
+    [System.Serializable]
+    public class HighScore
+    {
+        public string name;
+        public int score;
+    }
+
+    public void SaveHighScore()
+    {
+        HighScore highScore = new HighScore();
+        highScore.name = playerName;
+        highScore.score = m_Points;
+        string json = JsonUtility.ToJson(highScore);
+        System.IO.File.WriteAllText(Application.persistentDataPath + "/highscore.json", json);
+    }
+
+    public HighScore LoadHighScore()
+    {
+        if (!System.IO.File.Exists(Application.persistentDataPath + "/highscore.json"))
+        {
+            return new HighScore();
+        }
+        string json = System.IO.File.ReadAllText(Application.persistentDataPath + "/highscore.json");
+        HighScore highScore = JsonUtility.FromJson<HighScore>(json);
+        return highScore;
+    }
+
+    public void SetHighScoreText()
+    {
+        current_highScore = LoadHighScore();
+        HighScoreText.text = $"High Score : {current_highScore.name} : {current_highScore.score}";
     }
 }
